@@ -7,56 +7,96 @@
     <title>Test AWS Lambda</title>
     <meta name="description" content="">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="stylesheet" href="">
+    <link rel="stylesheet" href="css/style.css">
 </head>
 
 <body>
     <h1>Simple Demo for PUT, GET, and DELETE</h1>
-    <p id="lambda-info">
-        <!-- loaded with AJAX -->
-    </p>
+
+    <!-- Table to display loaded data -->
+    <h2>Current Items</h2>
+    <table id="items-table" border="1">
+        <tr>
+            <th>ID</th>
+            <th>Name</th>
+            <th>Price</th>
+            <th>Action</th>
+        </tr>
+    </table>
 
     <hr>
-    <button id="send-data">Send Data</button>
-    <p>Sends an example JSON object to the server with id 11111</p>
-    <script>
-        document.getElementById("send-data").onclick = function () {
-            let xhr = new XMLHttpRequest();
-            xhr.open("PUT", "Your Lambda here");
-            xhr.setRequestHeader("Content-Type", "application/json");
-            xhr.send(JSON.stringify({
-                "id": "6666666",
-                "price": 19,
-                "name": "test put value"
-            }));
-        }
-    </script>
+    
+    <!-- Form to add new items -->
+    <h2>Add New Item</h2>
+    <form id="add-item-form">
+        <label for="item-id">ID:</label>
+        <input type="text" id="item-id" required><br>
+        <label for="item-name">Name:</label>
+        <input type="text" id="item-name" required><br>
+        <label for="item-price">Price:</label>
+        <input type="number" id="item-price" required><br><br>
+        <button type="button" onclick="addItem()">Add Item</button>
+    </form>
 
-    <button id="load-data">Load Data</button>
-    <p>Loads data from the server</p>
+    <hr>
+
     <script>
-        document.getElementById("load-data").onclick = function () {
-            let lambda = document.getElementById("lambda-info");
+        const lambdaUrl = "https://j9rsnd2hck.execute-api.us-east-2.amazonaws.com/items";
+
+        // Function to load and display items in the table
+        function loadItems() {
             let xhr = new XMLHttpRequest();
-            xhr.addEventListener("load", function () {
-                lambda.innerHTML = xhr.response;
-            });
-            xhr.open("GET", "Your Lambda here");
+            xhr.open("GET", lambdaUrl);
+            xhr.onload = function () {
+                const items = JSON.parse(xhr.responseText);
+                const table = document.getElementById("items-table");
+
+                // Clear existing rows except header
+                table.innerHTML = `<tr><th>ID</th><th>Name</th><th>Price</th><th>Action</th></tr>`;
+
+                items.forEach(item => {
+                    const row = table.insertRow();
+                    row.insertCell(0).innerText = item.id;
+                    row.insertCell(1).innerText = item.name;
+                    row.insertCell(2).innerText = item.price;
+                    const deleteCell = row.insertCell(3);
+                    deleteCell.innerHTML = `<button onclick="deleteItem('${item.id}')">Delete</button>`;
+                });
+            };
             xhr.send();
         }
 
-    </script>
+        // Function to add a new item
+        function addItem() {
+            const id = document.getElementById("item-id").value;
+            const name = document.getElementById("item-name").value;
+            const price = document.getElementById("item-price").value;
 
-    <hr>
-    <button id="delete-data">Delete Data</button>
-    <p>Deletes a JSON object from the server with 11111</p>
-    <script>
-        document.getElementById("delete-data").onclick = function () {
             let xhr = new XMLHttpRequest();
-            xhr.open("DELETE", "Your Lambda here");
+            xhr.open("PUT", lambdaUrl);
             xhr.setRequestHeader("Content-Type", "application/json");
+            xhr.onload = function () {
+                loadItems(); // Reload items after adding
+                document.getElementById("add-item-form").reset(); // Clear form
+            };
+            xhr.send(JSON.stringify({ id, name, price }));
+        }
+
+        // Function to delete an item
+        function deleteItem(id) {
+            let xhr = new XMLHttpRequest();
+            xhr.open("DELETE", `${lambdaUrl}/${id}`);
+            xhr.onload = function () {
+                loadItems(); // Reload items after deleting
+            };
             xhr.send();
         }
+
+        // Load items on page load and refresh every 5 seconds
+        window.onload = function() {
+            loadItems();
+            setInterval(loadItems, 5000); // Refresh every 5 seconds
+        };
     </script>
 </body>
 
